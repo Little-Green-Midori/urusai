@@ -60,3 +60,47 @@ def build_video_collection_schema(client: Any, *, with_partition_key: bool = Fal
         )
     )
     return schema
+
+
+def collection_name_for(ingest_id: str) -> str:
+    """Canonical Milvus collection name for one ingest."""
+    return f"urusai_v_{ingest_id}"
+
+
+def ensure_video_collection(
+    client: Any,
+    ingest_id: str,
+    *,
+    with_partition_key: bool = False,
+) -> str:
+    """Create the per-ingest Milvus collection if missing; return its name.
+
+    Idempotent. Indexes match the multi-vector hybrid search retriever:
+    text_dense + visual_dense use AUTOINDEX with IP metric; text_sparse uses
+    SPARSE_INVERTED_INDEX with BM25 metric (the BM25 Function in the schema
+    populates text_sparse automatically from claim_text on insert).
+    """
+    name = collection_name_for(ingest_id)
+    if client.has_collection(collection_name=name):
+        return name
+    schema = build_video_collection_schema(
+        client, with_partition_key=with_partition_key
+    )
+    index_params = client.prepare_index_params()
+    index_params.add_index(
+        "text_dense", index_type="AUTOINDEX", metric_type="IP"
+    )
+    index_params.add_index(
+        "text_sparse",
+        index_type="SPARSE_INVERTED_INDEX",
+        metric_type="BM25",
+    )
+    index_params.add_index(
+        "visual_dense", index_type="AUTOINDEX", metric_type="IP"
+    )
+    client.create_collection(
+        collection_name=name,
+        schema=schema,
+        index_params=index_params,
+    )
+    return name

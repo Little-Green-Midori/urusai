@@ -28,7 +28,7 @@ source (HF repo URL, release tag, or vendor documentation).
 
 ## Entries
 
-_Populated by `backend/scripts/download_models.{sh,ps1}`. Empty on initial scaffold._
+_Populated by `urusai models download` (`backend/scripts/models/download.{sh,ps1}`). Empty on initial scaffold._
 
 Expected first-download set:
 

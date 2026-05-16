@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
-# Shared helpers for db-*.sh scripts. Source via:
-#   . "$(dirname "$0")/_db-common.sh"
+# Shared helpers for urusai launcher scripts. Source via:
+#   SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+#   . "$SCRIPT_DIR/../_lib/common.sh"
+
+_THIS_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+URUSAI_SCRIPTS_ROOT="$(cd "$_THIS_LIB_DIR/.." && pwd)"
+URUSAI_BACKEND_ROOT="$(cd "$URUSAI_SCRIPTS_ROOT/.." && pwd)"
 
 check_docker() {
     docker info >/dev/null 2>&1
@@ -24,10 +29,10 @@ wait_docker_ready() {
 }
 
 resolve_env_python() {
-    local config="$(dirname "$0")/.urusai-launcher.json"
+    local config="$URUSAI_SCRIPTS_ROOT/.urusai-launcher.json"
     if [ ! -f "$config" ]; then
         echo "Launcher config missing: $config" >&2
-        echo "Run scripts/start.ps1 first to do the one-time setup." >&2
+        echo "Run scripts/urusai.ps1 env install (on Windows) first to do the one-time setup." >&2
         return 1
     fi
 

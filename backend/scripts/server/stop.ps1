@@ -1,12 +1,10 @@
-# Force-kill urusai uvicorn processes (including multiprocessing children)
-# and free port 8000.
+# urusai server stop: kill uvicorn (including multiprocessing children) and free port 8000.
 #
 # Usage:
-#   .\scripts\kill.ps1
+#   .\scripts\urusai.ps1 server stop
 
 $ErrorActionPreference = "Continue"
 
-# Pass 1: kill python.exe with uvicorn in command line.
 $round1 = Get-CimInstance Win32_Process -Filter "Name='python.exe'" -ErrorAction SilentlyContinue |
     Where-Object {
         $_.CommandLine -and $_.CommandLine -match 'uvicorn'
@@ -27,12 +25,8 @@ if ($round1) {
     Write-Host "No uvicorn python processes found."
 }
 
-# Brief wait so parent kills register before scanning for orphans.
 Start-Sleep -Milliseconds 500
 
-# Pass 2: kill multiprocessing.spawn orphans whose parent_pid is dead.
-# uvicorn --reload spawns watchfiles workers via multiprocessing; killing the
-# parent leaves these children alive, still holding the listen socket.
 $allPython = Get-CimInstance Win32_Process -Filter "Name='python.exe'" -ErrorAction SilentlyContinue
 foreach ($p in $allPython) {
     if (-not $p.CommandLine) { continue }
@@ -48,7 +42,6 @@ foreach ($p in $allPython) {
     }
 }
 
-# Pass 3: free port 8000 if anything still holds it.
 $conns = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue
 foreach ($c in $conns) {
     try {

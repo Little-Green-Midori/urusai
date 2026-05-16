@@ -1,16 +1,11 @@
 #!/usr/bin/env bash
-# Force-kill urusai uvicorn processes and free port 8000.
-# Usage:
-#   ./scripts/kill.sh
-
+# urusai server stop: kill uvicorn and free port 8000.
 set +e
 
-# 1. Kill by command-line pattern.
 if command -v pkill >/dev/null 2>&1; then
     pkill -f "uvicorn urusai.api.main:app" && echo "killed uvicorn process(es)"
 fi
 
-# 2. Free port 8000 if anything still holds it.
 free_port() {
     local port=$1
     local pid=""
@@ -27,5 +22,4 @@ free_port() {
 }
 
 free_port 8000
-
 echo "Done."

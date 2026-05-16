@@ -1,18 +1,15 @@
-# Initialize urusai DB: verify Postgres + Milvus connectivity.
+# urusai db init: verify Postgres + Milvus connectivity.
 #
 # Usage:
-#   .\scripts\db-init.ps1
-#   .\scripts\db-init.ps1 -NoPause
+#   .\scripts\urusai.ps1 db init
 
 [CmdletBinding()]
-param(
-    [switch]$NoPause
-)
+param([switch]$NoPause)
 
 $ErrorActionPreference = "Stop"
 $global:UrusaiNoPause = [bool]$NoPause
 
-. (Join-Path $PSScriptRoot "_db-common.ps1")
+. (Join-Path $PSScriptRoot "..\_lib\common.ps1")
 
 Wait-DockerReady | Out-Null
 

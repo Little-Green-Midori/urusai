@@ -178,7 +178,7 @@ def cmd_clear() -> int:
         try:
             collections = client.list_collections()
             if collections:
-                print(f"  {len(collections)} collections preserved (use db-rebuild to drop)")
+                print(f"  {len(collections)} collections preserved (use `urusai db rebuild` to drop)")
             else:
                 print("  no collections")
         finally:

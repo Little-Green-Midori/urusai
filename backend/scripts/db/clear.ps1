@@ -1,18 +1,15 @@
-# Truncate all Postgres tables (schema preserved). Milvus collections untouched (use db-rebuild for that).
+# urusai db clear: truncate all Postgres tables (schema preserved; Milvus untouched).
 #
 # Usage:
-#   .\scripts\db-clear.ps1
-#   .\scripts\db-clear.ps1 -NoPause
+#   .\scripts\urusai.ps1 db clear
 
 [CmdletBinding()]
-param(
-    [switch]$NoPause
-)
+param([switch]$NoPause)
 
 $ErrorActionPreference = "Stop"
 $global:UrusaiNoPause = [bool]$NoPause
 
-. (Join-Path $PSScriptRoot "_db-common.ps1")
+. (Join-Path $PSScriptRoot "..\_lib\common.ps1")
 
 Wait-DockerReady | Out-Null
 

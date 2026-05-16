@@ -1,10 +1,9 @@
-# Stop urusai DB stack.
+# urusai db stop: docker compose stop / down / down-v.
 #
 # Usage:
-#   .\scripts\db-stop.ps1              # docker compose stop（containers preserved）
-#   .\scripts\db-stop.ps1 -Down        # docker compose down（containers removed, volumes kept）
-#   .\scripts\db-stop.ps1 -DownVolumes # docker compose down -v（DATA LOST）
-#   .\scripts\db-stop.ps1 -NoPause
+#   .\scripts\urusai.ps1 db stop              # docker compose stop (containers preserved)
+#   .\scripts\urusai.ps1 db stop -Down        # docker compose down (containers removed, volumes kept)
+#   .\scripts\urusai.ps1 db stop -DownVolumes # docker compose down -v (DATA LOST)
 
 [CmdletBinding()]
 param(
@@ -16,14 +15,16 @@ param(
 $ErrorActionPreference = "Stop"
 $global:UrusaiNoPause = [bool]$NoPause
 
-. (Join-Path $PSScriptRoot "_db-common.ps1")
+. (Join-Path $PSScriptRoot "..\_lib\common.ps1")
 
 Wait-DockerReady | Out-Null
 
-$root = Resolve-Path (Join-Path $PSScriptRoot "..")
-$compose = Join-Path $root "docker-compose.yml"
-$logsDir = Join-Path $root "logs"
+$compose = Join-Path $UrusaiBackendRoot "docker-compose.yml"
+if (-not (Test-Path $compose)) {
+    $compose = Join-Path (Split-Path -Parent $UrusaiBackendRoot) "docker-compose.yml"
+}
 
+$logsDir = Join-Path $UrusaiBackendRoot "logs"
 if (-not (Test-Path $logsDir)) {
     New-Item -ItemType Directory -Path $logsDir | Out-Null
 }
@@ -50,7 +51,7 @@ Write-Host ""
 Write-Host "urusai DB stack: $action" -ForegroundColor $color
 
 $proc = Start-Process -FilePath "docker" -ArgumentList $dockerArgs `
-    -WorkingDirectory $root -NoNewWindow -PassThru `
+    -WorkingDirectory $UrusaiBackendRoot -NoNewWindow -PassThru `
     -RedirectStandardOutput $outLog `
     -RedirectStandardError $errLog
 
@@ -79,7 +80,6 @@ $rc = $proc.ExitCode
 if ($rc -ne 0) {
     Write-Host ""
     Write-Host "docker compose exited with code $rc" -ForegroundColor Red
-    Write-Host "Logs: $outLog / $errLog"
 }
 
 Pause-OnExit

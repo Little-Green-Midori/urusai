@@ -1,31 +1,30 @@
-# Start urusai DB stack (Postgres + Milvus + etcd + minio + attu) via docker compose.
+# urusai db start: bring up the dev docker stack (Postgres + Milvus + etcd + minio + attu).
 #
 # Usage:
-#   .\scripts\db-start.ps1
-#   .\scripts\db-start.ps1 -NoPause   # don't wait Enter at end
+#   .\scripts\urusai.ps1 db start
+#   .\scripts\urusai.ps1 db start -NoPause
 
 [CmdletBinding()]
-param(
-    [switch]$NoPause
-)
+param([switch]$NoPause)
 
 $ErrorActionPreference = "Stop"
 $global:UrusaiNoPause = [bool]$NoPause
 
-. (Join-Path $PSScriptRoot "_db-common.ps1")
+. (Join-Path $PSScriptRoot "..\_lib\common.ps1")
 
-$root = Resolve-Path (Join-Path $PSScriptRoot "..")
-$compose = Join-Path $root "docker-compose.yml"
-$logsDir = Join-Path $root "logs"
-
+$compose = Join-Path $UrusaiBackendRoot "docker-compose.yml"
 if (-not (Test-Path $compose)) {
-    Write-Host "docker-compose.yml not found at $compose" -ForegroundColor Red
+    $compose = Join-Path (Split-Path -Parent $UrusaiBackendRoot) "docker-compose.yml"
+}
+if (-not (Test-Path $compose)) {
+    Write-Host "docker-compose.yml not found in backend/ or repo root." -ForegroundColor Red
     Pause-OnExit
     exit 1
 }
 
 Wait-DockerReady | Out-Null
 
+$logsDir = Join-Path $UrusaiBackendRoot "logs"
 if (-not (Test-Path $logsDir)) {
     New-Item -ItemType Directory -Path $logsDir | Out-Null
 }
@@ -40,11 +39,10 @@ Write-Host "Starting urusai DB stack..." -ForegroundColor Cyan
 $proc = Start-Process -FilePath "docker" -ArgumentList @(
     "compose", "-p", "urusai", "-f", $compose,
     "--progress=quiet", "up", "-d"
-) -WorkingDirectory $root -NoNewWindow -PassThru `
+) -WorkingDirectory $UrusaiBackendRoot -NoNewWindow -PassThru `
     -RedirectStandardOutput $outLog `
     -RedirectStandardError $errLog
 
-# Spinner — single line in-place refresh
 $spinner = @('|', '/', '-', '\')
 $i = 0
 $startedAt = Get-Date
@@ -58,7 +56,6 @@ $elapsed = ((Get-Date) - $startedAt).TotalSeconds.ToString("F1")
 Write-Host -NoNewline "`r"
 Write-Host ("  done in {0}s                                                " -f $elapsed) -ForegroundColor Green
 
-# Replay captured output
 foreach ($f in @($outLog, $errLog)) {
     if (Test-Path $f) {
         Get-Content $f | Where-Object { $_ -and $_.Trim() } | ForEach-Object {
@@ -83,7 +80,7 @@ Write-Host "  Milvus   : localhost:19531 (gRPC) / localhost:9092 (health)"
 Write-Host "  MinIO    : localhost:9100 (API) / http://localhost:9101 (console)"
 Write-Host "  Attu     : http://localhost:3001"
 Write-Host ""
-Write-Host "Status: .\scripts\db-status.ps1" -ForegroundColor Yellow
-Write-Host "Stop:   .\scripts\db-stop.ps1"
+Write-Host "Status:  .\scripts\urusai.ps1 db status" -ForegroundColor Yellow
+Write-Host "Stop:    .\scripts\urusai.ps1 db stop"
 
 Pause-OnExit

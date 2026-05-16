@@ -11,6 +11,6 @@ Module surface:
 """
 from urusai.rag.embedder import GeminiEmbedder
 from urusai.rag.retriever import hybrid_search
-from urusai.rag.writer import write_claim
+from urusai.rag.writer import write_claims
 
-__all__ = ["GeminiEmbedder", "hybrid_search", "write_claim"]
+__all__ = ["GeminiEmbedder", "hybrid_search", "write_claims"]

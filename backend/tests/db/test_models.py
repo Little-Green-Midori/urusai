@@ -16,6 +16,8 @@ def test_metadata_has_expected_tables():
         "evidence_claims",
         "query_log",
         "query_evidence_log",
+        "run_events",
+        "job_events",
     }
 
 
