@@ -76,11 +76,13 @@ Dev server at `http://localhost:3000`.
 | Variable | Required | Purpose |
 |---|---|---|
 | `GEMINI_API_KEY` | Yes | Main LLM + `gemini-embedding-2`. Comma-separated values enable multi-token rotation. |
-| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GROQ_API_KEY` / `DASHSCOPE_API_KEY` | No | Fallback LLMs / Qwen vision via DashScope |
-| `DEEPGRAM_API_KEY` / `ASSEMBLYAI_API_KEY` | No | Hosted ASR + diarization fallback |
-| `HF_TOKEN` | No | HuggingFace User Access Token (auto-picked by huggingface_hub / transformers / pyannote.audio for gated weights) |
-| `JINA_API_KEY` / `EXA_API_KEY` / `TAVILY_API_KEY` | No | External fetch + search for escalation (HITL-gated) |
-| `PG_*` / `MILVUS_*` | Yes | Match `docker-compose.yml` defaults |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | No | LLM + vision fallback (OpenAI also unlocks `text-embedding-3` + Whisper API). |
+| `GROQ_API_KEY` / `DASHSCOPE_API_KEY` / `COHERE_API_KEY` / `MISTRAL_API_KEY` / `XAI_API_KEY` / `TOGETHER_API_KEY` / `FIREWORKS_API_KEY` / `OPENROUTER_API_KEY` | No | Additional LLM / VLM fallbacks (Cohere also unlocks Embed v3 + Rerank v3.5; Mistral also unlocks Pixtral vision; Fireworks also unlocks hosted Llama-Vision; OpenRouter fans out to 100+ models). |
+| `VOYAGE_API_KEY` | No | Voyage AI embeddings + reranker. |
+| `DEEPGRAM_API_KEY` / `ASSEMBLYAI_API_KEY` / `ELEVENLABS_API_KEY` / `GLADIA_API_KEY` | No | Hosted ASR + diarization fallback. |
+| `HF_TOKEN` | No | HuggingFace User Access Token (auto-picked by huggingface_hub / transformers / pyannote.audio for gated weights). |
+| `JINA_API_KEY` / `EXA_API_KEY` / `TAVILY_API_KEY` / `BRAVE_SEARCH_API_KEY` / `SERPER_API_KEY` / `PERPLEXITY_API_KEY` | No | External fetch + search for escalation (HITL-gated). Jina key also unlocks Jina Embeddings + Reranker. |
+| `PG_*` / `MILVUS_*` | Yes | Match `docker-compose.yml` defaults. |
 
 Full reference: [`backend/.env.example`](backend/.env.example).
 

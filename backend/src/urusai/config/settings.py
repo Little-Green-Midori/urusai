@@ -52,10 +52,23 @@ class Settings(BaseSettings):
     anthropic_api_keys: TokenList = Field(default_factory=list, alias="ANTHROPIC_API_KEY")
     groq_api_keys: TokenList = Field(default_factory=list, alias="GROQ_API_KEY")
     dashscope_api_keys: TokenList = Field(default_factory=list, alias="DASHSCOPE_API_KEY")
+    # The Cohere SDK reads CO_API_KEY natively; URUSAI uses COHERE_API_KEY for
+    # naming consistency and passes the value to the client explicitly.
+    cohere_api_keys: TokenList = Field(default_factory=list, alias="COHERE_API_KEY")
+    mistral_api_keys: TokenList = Field(default_factory=list, alias="MISTRAL_API_KEY")
+    xai_api_keys: TokenList = Field(default_factory=list, alias="XAI_API_KEY")
+    together_api_keys: TokenList = Field(default_factory=list, alias="TOGETHER_API_KEY")
+    fireworks_api_keys: TokenList = Field(default_factory=list, alias="FIREWORKS_API_KEY")
+    openrouter_api_keys: TokenList = Field(default_factory=list, alias="OPENROUTER_API_KEY")
+
+    # Embedding / reranker fallback (separate from Cohere / Jina shared keys above).
+    voyage_api_keys: TokenList = Field(default_factory=list, alias="VOYAGE_API_KEY")
 
     # ASR fallback (hosted).
     deepgram_api_keys: TokenList = Field(default_factory=list, alias="DEEPGRAM_API_KEY")
     assemblyai_api_keys: TokenList = Field(default_factory=list, alias="ASSEMBLYAI_API_KEY")
+    elevenlabs_api_keys: TokenList = Field(default_factory=list, alias="ELEVENLABS_API_KEY")
+    gladia_api_keys: TokenList = Field(default_factory=list, alias="GLADIA_API_KEY")
 
     # HF gated models. Canonical env var: HF_TOKEN (auto-picked by huggingface_hub).
     huggingface_tokens: TokenList = Field(default_factory=list, alias="HF_TOKEN")
@@ -64,6 +77,9 @@ class Settings(BaseSettings):
     jina_api_keys: TokenList = Field(default_factory=list, alias="JINA_API_KEY")
     exa_api_keys: TokenList = Field(default_factory=list, alias="EXA_API_KEY")
     tavily_api_keys: TokenList = Field(default_factory=list, alias="TAVILY_API_KEY")
+    brave_search_api_keys: TokenList = Field(default_factory=list, alias="BRAVE_SEARCH_API_KEY")
+    serper_api_keys: TokenList = Field(default_factory=list, alias="SERPER_API_KEY")
+    perplexity_api_keys: TokenList = Field(default_factory=list, alias="PERPLEXITY_API_KEY")
 
     # Postgres (single connection — no rotation).
     # pg_password default is for local docker-compose dev only; production
@@ -87,9 +103,15 @@ class Settings(BaseSettings):
 
     @field_validator(
         "gemini_api_keys", "openai_api_keys", "anthropic_api_keys",
-        "groq_api_keys", "dashscope_api_keys", "deepgram_api_keys",
-        "assemblyai_api_keys", "huggingface_tokens",
+        "groq_api_keys", "dashscope_api_keys",
+        "cohere_api_keys", "mistral_api_keys", "xai_api_keys",
+        "together_api_keys", "fireworks_api_keys", "openrouter_api_keys",
+        "voyage_api_keys",
+        "deepgram_api_keys", "assemblyai_api_keys",
+        "elevenlabs_api_keys", "gladia_api_keys",
+        "huggingface_tokens",
         "jina_api_keys", "exa_api_keys", "tavily_api_keys",
+        "brave_search_api_keys", "serper_api_keys", "perplexity_api_keys",
         mode="before",
     )
     @classmethod
