@@ -57,12 +57,13 @@ class Settings(BaseSettings):
     deepgram_api_keys: TokenList = Field(default_factory=list, alias="DEEPGRAM_API_KEY")
     assemblyai_api_keys: TokenList = Field(default_factory=list, alias="ASSEMBLYAI_API_KEY")
 
-    # HF gated models.
-    huggingface_api_keys: TokenList = Field(default_factory=list, alias="HUGGINGFACE_API_KEY")
+    # HF gated models. Canonical env var: HF_TOKEN (auto-picked by huggingface_hub).
+    huggingface_tokens: TokenList = Field(default_factory=list, alias="HF_TOKEN")
 
     # Escalator: external search / fetch.
     jina_api_keys: TokenList = Field(default_factory=list, alias="JINA_API_KEY")
     exa_api_keys: TokenList = Field(default_factory=list, alias="EXA_API_KEY")
+    tavily_api_keys: TokenList = Field(default_factory=list, alias="TAVILY_API_KEY")
 
     # Postgres (single connection — no rotation).
     # pg_password default is for local docker-compose dev only; production
@@ -87,7 +88,8 @@ class Settings(BaseSettings):
     @field_validator(
         "gemini_api_keys", "openai_api_keys", "anthropic_api_keys",
         "groq_api_keys", "dashscope_api_keys", "deepgram_api_keys",
-        "assemblyai_api_keys", "huggingface_api_keys", "jina_api_keys", "exa_api_keys",
+        "assemblyai_api_keys", "huggingface_tokens",
+        "jina_api_keys", "exa_api_keys", "tavily_api_keys",
         mode="before",
     )
     @classmethod

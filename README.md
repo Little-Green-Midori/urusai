@@ -78,8 +78,8 @@ Dev server at `http://localhost:3000`.
 | `GEMINI_API_KEY` | Yes | Main LLM + `gemini-embedding-2`. Comma-separated values enable multi-token rotation. |
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GROQ_API_KEY` / `DASHSCOPE_API_KEY` | No | Fallback LLMs / Qwen vision via DashScope |
 | `DEEPGRAM_API_KEY` / `ASSEMBLYAI_API_KEY` | No | Hosted ASR + diarization fallback |
-| `HUGGINGFACE_API_KEY` | No | HuggingFace gated weights (pyannote, PaddleOCR-VL) |
-| `JINA_API_KEY` / `EXA_API_KEY` | No | External fetch for escalation (HITL-gated) |
+| `HF_TOKEN` | No | HuggingFace User Access Token (auto-picked by huggingface_hub / transformers / pyannote.audio for gated weights) |
+| `JINA_API_KEY` / `EXA_API_KEY` / `TAVILY_API_KEY` | No | External fetch + search for escalation (HITL-gated) |
 | `PG_*` / `MILVUS_*` | Yes | Match `docker-compose.yml` defaults |
 
 Full reference: [`backend/.env.example`](backend/.env.example).
