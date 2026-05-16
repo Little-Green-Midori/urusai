@@ -1,136 +1,89 @@
-# 貢獻指南
+# Contributing
 
-歡迎 issue / PR。
-
-## 目錄
-
-- [開發環境](#開發環境)
-- [程式碼規範](#程式碼規範)
-- [Commit message 規則](#commit-message-規則)
-- [PR 流程](#pr-流程)
-- [文件貢獻](#文件貢獻)
-
----
-
-## 開發環境
-
-### 系統需求
-
-- Python 3.11+
-- `ffmpeg`、`yt-dlp` 在 `PATH` 上
-- CUDA-capable GPU（建議；本地 ASR 需要）
-
-### 安裝
+## Development setup
 
 ```bash
 git clone https://github.com/Little-Green-Midori/urusai.git
 cd urusai
-python -m venv .venv
-source .venv/bin/activate     # Windows PowerShell：.venv\Scripts\Activate.ps1
-pip install -e .[dev]
-cp .env.example .env
-# 編輯 .env、至少填 GEMINI_API_KEY
+docker compose up -d           # Postgres + Milvus + etcd + MinIO + Attu
+
+# Backend
+cd backend
+conda activate urusai          # or your venv equivalent
+pip install -e ".[dev]"
+cp .env.example .env           # fill in GEMINI_API_KEY at minimum
+alembic upgrade head
+uvicorn urusai.api.main:app --reload --port 8000
+
+# Frontend (from repo root)
+cd ..
+pnpm install
+pnpm --filter @urusai/frontend dev
 ```
 
-### 跑測試
+### System requirements
+
+- Python 3.11+
+- Node.js 24+
+- `ffmpeg`, `yt-dlp` on `PATH`
+- CUDA-capable GPU recommended for local ASR
+
+## Code style
+
+- **Python**: see `backend/pyproject.toml` `[tool.ruff]`; line-length 100, target Python 3.11.
+- **Type hints**: required on all public functions.
+- **Pydantic**: v2 syntax only (no `.dict()`, `.parse_obj()`, `class Config:`).
+- **TypeScript**: see `frontend/tsconfig.json`; strict mode on.
+- **Comment language**: zh-TW + technical English jargon for backend; English for frontend public-facing strings.
+
+## Testing
 
 ```bash
+cd backend
 pytest
+ruff check src/ tests/
+
+# from repo root
+pnpm --filter @urusai/frontend typecheck
+pnpm --filter @urusai/frontend build
 ```
 
-### Lint / format
+## Commit messages
 
-```bash
-ruff check .
-ruff format .
-```
-
-### 跑開發 UI
-
-```bash
-streamlit run streamlit_app.py
-```
-
-### 跑 API server
-
-```bash
-uvicorn urusai.api.main:app --reload
-```
-
----
-
-## 程式碼規範
-
-- **Python style**：依 `pyproject.toml` 內 `[tool.ruff]` 設定，line-length 100，target Python 3.11。
-- **Type hints**：所有 public function 必須帶 type hints。
-- **Pydantic**：domain 層用 v2 syntax，避免 deprecated pattern（`.dict()` / `.parse_obj()` / `class Config:` 等）。
-- **註解語言**：source code 註解 zh-TW + 必要英文 jargon；docstring 同。docs 預設 zh-TW。
-
----
-
-## Commit message 規則
-
-採用 [Conventional Commits](https://www.conventionalcommits.org/)：
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
 <type>(<scope>): <subject>
 
 <body>
-
-<footer>
 ```
 
-常用 type：
+Common types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`.
+Common scopes: `agent`, `channels`, `api`, `db`, `rag`, `providers`, `frontend`.
 
-- `feat`：新功能
-- `fix`：bug 修正
-- `docs`：純文件變更
-- `refactor`：重構，無行為變更
-- `test`：測試新增 / 修改
-- `chore`：build / config / dep 變更
-- `perf`：效能改善
+Author yourself in commits — do not add tool-attribution trailers.
 
-scope 範例：`agent`、`channels`、`api`、`store`、`ui`、`docs`。
+## Pull requests
 
-不在 commit message 中加 AI 模型相關 trailer。
+1. Fork (if not a maintainer).
+2. Branch: `feat/<name>`, `fix/<name>`, `docs/<name>`.
+3. Implement + tests + relevant doc updates.
+4. Verify: `ruff check .`, `pytest`, frontend `typecheck` + `build`.
+5. Open PR with:
+   - What problem the PR solves (link issues if any)
+   - Approach summary
+   - Verification method
+   - Affected modules
 
----
+`main` only accepts reviewed PRs.
 
-## PR 流程
+## Adding a new channel provider
 
-1. Fork repo（如非主 repo 維護者）。
-2. 建分支：`feat/short-name`、`fix/short-name`、`docs/short-name` 等。
-3. 寫 code + 測試 + 文件。
-4. `ruff check .` + `pytest` 通過。
-5. 推到分支、開 PR。
-6. PR 描述包含：
-   - 解決什麼問題（連結 issue 如有）
-   - 技術 approach 摘要
-   - 測試 / 驗證方式
-   - 影響的模組
+Channels follow a `Channel + Provider` registry pattern.
 
-主分支（`main`）僅接受通過 review 的 PR。
-
----
-
-## 開新 channel
-
-實作步驟：
-
-1. 繼承 `urusai.channels.base.Channel` Protocol（`name`、`async extract`）
-2. 產出的每條 `EvidenceClaim` 必須帶 `source_tool`（含工具名 + 版本 / 設定）
-3. 預設 `confidence_marker` 必須合理（不要全標 `clear`）
-4. 在 `inventory_probe` 加入啟動條件
-5. 在 `routes.py` ingest_endpoint 中接 dispatch
-6. 寫 unit test
-7. 更新 `docs/reference/modules.md` + `CHANGELOG.md`
-
-詳見 [`docs/how-to/add-a-new-channel.md`](docs/how-to/add-a-new-channel.md)。
-
----
-
-## 文件貢獻
-
-- 文件語言預設 zh-TW；技術名詞（model id、API name、套件名、command）保留英文。
-- 文件描述對應 `src/` 內已實作 module；code 改了文件要同步改。
-- 不寫尚未實作的功能；對外部工具的版本 / API 描述必須能 cite source URL。
+1. Implement the `Provider` Protocol (`name`, `channel`, `config_class`, `async extract`, `unload`) in `backend/src/urusai/channels/<channel>/<provider>.py`.
+2. Add `@ChannelRegistry.register(channel=..., name=...)` decorator.
+3. Import the new module in `backend/src/urusai/channels/<channel>/__init__.py` to trigger registration.
+4. Every emitted `EvidenceClaim` must carry a `source_tool` string (tool name + version + key config) and a `source_spec` triple (channel / provider / config dump).
+5. Set `confidence` honestly — don't blanket-mark `clear`.
+6. Add unit tests under `backend/tests/channels/`.

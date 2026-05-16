@@ -1,1 +1,0 @@
-"""Music source separation channel."""

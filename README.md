@@ -1,128 +1,104 @@
-# urusai
+# URUSAI
 
-> 一個會看影片、但拒絕憑印象答題的代理人。每個答案都要指回筆記、指不回就承認看不到。
+> Video RAG agent that refuses to answer without grounded evidence.
 
-## 是什麼
+URUSAI extracts per-modality evidence from a video — subtitles, ASR, scene boundaries, on-screen text, speaker turns, visual descriptions, audio events — and answers questions by retrieving and citing those evidence claims. Every answer must point back to a timestamped source; when evidence is missing, URUSAI abstains rather than guess.
 
-`urusai` 是 Video RAG agent。把 Video RAG 視為**資訊調度**問題、不是**影片理解**問題：VLM / LVLM 已能理解短片段，但**長影片**、**fine-grained timing**、**跨段聚合**、**長尾領域**、**token cost** 這五道邊界仍在；`urusai` 不重造 VLM，而是補這些邊界。
+## Stack
 
-## 目前狀態
+| Layer | Tech |
+|---|---|
+| Frontend | Next.js 16 (App Router) + React 19 + Vercel AI SDK v5 + Tailwind v4 + shadcn/ui (base-ui) |
+| Backend | Python 3.11 + FastAPI + LangGraph 1.x + SQLAlchemy async + pymilvus |
+| Orchestration | LangGraph `AsyncPostgresSaver` over thread / run / interrupt / job resources |
+| Storage | Postgres 16 (channel-open schema) + Milvus 2.5 (multi-vector hybrid: dense + BM25 sparse) |
+| Channels | dialogue / subtitle / scene / ocr / diarization / vlm / audio_event / mss |
+| LLM | Gemini family (default) + OpenAI / Anthropic / Qwen / Groq / Deepgram / AssemblyAI (fallbacks) |
+| Streaming | SSE with deterministic event_id + `Last-Event-ID` resume |
 
-- 單影片 + in-memory ingest store
-- 對白本：manual SUB（yt-dlp）+ faster-whisper local 已接
-- 場景本：PySceneDetect 已接
-- Agent：sequential `orchestrator → integrator`，主 LLM 為 Gemma 4 31B IT via Gemini API
-- API：`POST /ingest`、`POST /query`、`GET /healthz`
-- Streamlit dev UI：in-process TestClient 呼叫 API
+## Repo layout
 
-## 系統需求
-
-- Python 3.11+
-- `ffmpeg`、`yt-dlp` 在 PATH 上
-- **`GEMINI_API_KEY`**（必要）：主代理人 LLM 與 Gemini 系列 vision/audio 呼叫共用 key
-- CUDA-capable GPU（建議）：local ASR（`faster-whisper`）效能；無 GPU 可走 CPU 但慢
-- 選用：`OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GROQ_API_KEY` / `DEEPGRAM_API_KEY` / `ASSEMBLYAI_API_KEY` / `JINA_API_KEY` / `EXA_API_KEY` 為備援 provider
-
-## 安裝
-
-```bash
-pip install -e .[dev]
-cp .env.example .env   # 填入 API key（至少 GEMINI_API_KEY）
+```
+urusai/
+├── README.md
+├── LICENSE
+├── CONTRIBUTING.md
+├── THIRD_PARTY_MODELS.md
+├── pnpm-workspace.yaml
+├── docker-compose.yml
+├── backend/
+│   ├── pyproject.toml
+│   ├── alembic/
+│   ├── scripts/
+│   └── src/urusai/{domain,providers,ingest,rag,agent,api,config,db}/
+└── frontend/
+    ├── package.json
+    └── src/{app,components,lib}/
 ```
 
 ## Quick start
 
-### REST API
+### 1. Infra
 
 ```bash
-uvicorn urusai.api.main:app --reload
+docker compose up -d
 ```
+
+Brings up Postgres (host port 5433), Milvus 2.5 (gRPC host port 19531), etcd, MinIO, Attu. Non-default host ports avoid collisions with other local Postgres / Milvus installs.
+
+### 2. Backend
 
 ```bash
-# 上傳本機檔案、或丟 URL（yt-dlp 會抓下來）
-curl -X POST http://localhost:8000/ingest \
-  -H 'content-type: application/json' \
-  -d '{"file_path": "/path/to/video.mp4"}'
-
-# -> {"ingest_id": "abc123...", "inventory": {...}, "notebooks": {...}}
-
-# 問問題
-curl -X POST http://localhost:8000/query \
-  -H 'content-type: application/json' \
-  -d '{"ingest_id": "abc123...", "query": "她在開頭說了什麼？"}'
-
-# -> {"status": "answered" | "abstain", "answer": ..., "cited_evidence": [...], "trace": "..."}
+conda activate urusai
+cd backend
+pip install -e ".[dev]"
+cp .env.example .env   # fill in GEMINI_API_KEY at minimum
+alembic upgrade head
+uvicorn urusai.api.main:app --reload --port 8000
 ```
 
-### Streamlit dev UI
+`GET http://localhost:8000/healthz` → `{"status":"ok"}`.
+
+### 3. Frontend
 
 ```bash
-streamlit run streamlit_app.py
+cd ..                   # repo root
+pnpm install
+pnpm --filter @urusai/frontend dev
 ```
 
-Streamlit UI 透過 in-process FastAPI TestClient 呼叫 endpoints，跟外部 HTTP client 走同一條 code path。
+Dev server at `http://localhost:3000`.
 
-## 系統架構
+## Configuration
 
-```
-        video file / URL
-               │
-               ▼
-   ┌────────────────────────┐
-   │  inventory probe       │  has_speech / has_visual / has_music ...
-   └──────────┬─────────────┘
-              │ dispatch
-   ┌──────────┴──────────┐
-   ▼                     ▼
- SubtitleChannel  ASRChannel   SceneChannel
-              │
-              ▼
-      五本筆記  +  共同時間軸
-              │
-              ▼
-   ┌────────────────────────┐
-   │  query                 │
-   │   ↓                    │
-   │  orchestrator          │   →  retrieve evidence
-   │   ↓                    │
-   │  integrator            │   →  Gemma 4 31B IT (via Gemini API)
-   │   ↓                    │       answered (cite indices) | abstain
-   │  evidence trace        │
-   └────────────────────────┘
-```
+`backend/.env` (copy from `backend/.env.example`):
 
-## 文件
-
-文件遵循 [Diátaxis](https://diataxis.fr/) 四象限：
-
-- [`docs/tutorials/`](docs/tutorials/)——入門範例
-- [`docs/how-to/`](docs/how-to/)——任務 recipe
-- [`docs/reference/`](docs/reference/)——API、設定、schema、module map、硬體基線
-
-## 設定
-
-`.env` 完整列表見 `.env.example`：
-
-| 變數 | 必要 | 用途 |
+| Variable | Required | Purpose |
 |---|---|---|
-| `GEMINI_API_KEY` | 是 | 主代理人 LLM（Gemma 4 31B IT）與 Gemini family vision / audio call |
-| `OPENAI_API_KEY` | 否 | 備援；Whisper API fallback 或 GPT vision |
-| `ANTHROPIC_API_KEY` | 否 | 備援；Claude vision |
-| `GROQ_API_KEY` | 否 | 備援；Whisper-Turbo on Groq 為低成本 ASR API |
-| `DEEPGRAM_API_KEY` / `ASSEMBLYAI_API_KEY` | 否 | hosted ASR + diarization |
-| `JINA_API_KEY` / `EXA_API_KEY` | 否 | 外部查證 |
+| `GEMINI_API_KEY` | Yes | Main LLM + `gemini-embedding-2`. Comma-separated values enable multi-token rotation. |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GROQ_API_KEY` / `DASHSCOPE_API_KEY` | No | Fallback LLMs / Qwen vision via DashScope |
+| `DEEPGRAM_API_KEY` / `ASSEMBLYAI_API_KEY` | No | Hosted ASR + diarization fallback |
+| `HUGGINGFACE_API_KEY` | No | HuggingFace gated weights (pyannote, PaddleOCR-VL) |
+| `JINA_API_KEY` / `EXA_API_KEY` | No | External fetch for escalation (HITL-gated) |
+| `PG_*` / `MILVUS_*` | Yes | Match `docker-compose.yml` defaults |
 
-## 開發
+Full reference: [`backend/.env.example`](backend/.env.example).
+
+## Development
 
 ```bash
-# 測試
+# Backend
+cd backend
 pytest
+ruff check src/ tests/
+ruff format src/ tests/
 
-# Lint / format
-ruff check .
-ruff format .
+# Frontend (from repo root)
+pnpm --filter @urusai/frontend typecheck
+pnpm --filter @urusai/frontend lint
+pnpm --filter @urusai/frontend build
 ```
 
 ## License
 
-Apache 2.0；見 [`LICENSE`](LICENSE)。
+Apache 2.0. See [`LICENSE`](LICENSE).

@@ -1,0 +1,20 @@
+packages:
+  - "frontend"
+
+# Supply-chain hardening — pnpm 11 official defaults.
+# Unit is MINUTES, not seconds. 1440 = 24 hours = pnpm 11 default.
+# Source: https://pnpm.io/settings + https://github.com/pnpm/pnpm/commit/c7203b99ad15922bb7e268f13b76d5b6fe8e4ee1
+minimumReleaseAge: 1440
+minimumReleaseAgeStrict: true
+
+# Prevent transitive deps from resolving via git / tarball URLs (only registry).
+blockExoticSubdeps: true
+
+# Lifecycle scripts decision — pnpm 11 demands explicit choice per package.
+# True = approve, false = deny.
+allowBuilds:
+  # Approved
+  sharp: true        # Next.js image optimization (MIT, well-established native module)
+
+  # Denied (we acknowledge them so pnpm doesn't error on ignored-builds)
+  msw: false         # Mock Service Worker — testing-only, no runtime need
